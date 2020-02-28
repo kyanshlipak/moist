@@ -1,0 +1,100 @@
+// This #include statement was automatically added by the Particle IDE.
+// This #include statement was automatically added by the Particle IDE.
+#include <Ubidots.h>
+#include "Adafruit_Seesaw.h"
+
+Adafruit_Seesaw ss;
+
+const char* WEBHOOK_NAME = "my-webhook2";
+
+Ubidots ubidots("webhook", UBI_PARTICLE);
+
+void setup()
+{
+  Particle.variable("avCap",100);
+  Serial.begin(115200);
+
+  Serial.println("seesaw Soil Sensor example!");
+
+  if (!ss.begin(0x36))
+  {
+    Serial.println("ERROR! seesaw not found");
+    while (1)
+      ;
+  }
+  else
+  {
+    Serial.print("seesaw started! version: ");
+    Serial.println(ss.getVersion(), HEX);
+  }
+  RGB.brightness(0); // all of the way off (MAX DARK)
+}
+
+
+int last_x = 0, last_y = 0;
+
+void BubbleSort(uint16_t a[], uint16_t array_size)
+{
+    uint16_t i, j, temp;
+    for (i = 0; i < (array_size - 1); ++i)
+    {
+        for (j = 0; j < array_size - 1 - i; ++j )
+        {
+            if (a[j] > a[j+1])
+            {
+                temp = a[j+1];
+                a[j+1] = a[j];
+                a[j] = temp;
+            }
+        }
+    }
+}
+
+void loop() {
+  uint16_t temps[20] = {};
+  uint16_t capreads[20] = {};
+//   System.sleep(45);
+  for (int i =0;i<20;i++){
+  uint16_t tempC = ss.getTemp();
+  uint16_t capread = ss.touchRead(0);
+  uint16_t tempF = (tempC*9/5) + 32;
+  temps[i]= tempF;
+  capreads[i]= capread;
+  Serial.print("Temperature: ");
+  Serial.print(tempF);
+  Serial.println("*F");
+  Serial.print("Capacitive: ");
+  Serial.println(capread);
+  delay(3000);
+  }
+  
+  BubbleSort(capreads,20);
+  BubbleSort(temps,20);
+  uint16_t avCap = (capreads[5]+capreads[6]+capreads[7]+capreads[8]+capreads[9]+capreads[10]+capreads[11]+capreads[12]+capreads[13]+capreads[14])/10;
+  float avTemp = (temps[5]+temps[6]+temps[7]+temps[8]+temps[9]+temps[10]+temps[11]+temps[12]+temps[13]+temps[14])/10;
+
+  for (int i = 0; i<20;i++){
+      Serial.println(temps[i]);
+      delay(10);
+      Serial.println(capreads[i]);
+      delay(10);
+  }
+  Serial.println(avCap);
+  Serial.println(avTemp);
+  ubidots.add("temperature", avTemp);  // Change for your variable name
+  ubidots.add("moisturereading", avCap);
+  
+  bool bufferSent = false;
+  bufferSent = ubidots.send(WEBHOOK_NAME, PUBLIC);  // Will use particle webhooks to send data
+
+  if(bufferSent){
+    // Do something if values were sent properly
+    Serial.println("Values sent by the device");
+  }
+  System.sleep(SLEEP_MODE_DEEP,120);
+//   delay(60000);
+  
+  
+}
+
+// print("HI");
