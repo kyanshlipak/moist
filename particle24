@@ -81,8 +81,8 @@ void loop() {
   }
   Serial.println(avCap);
   Serial.println(avTemp);
-  ubidots.add("temperature", avTemp);  // Change for your variable name
-  ubidots.add("moisturereading", avCap);
+  ubidots.add("temperature2", avTemp);  // Change for your variable name
+  ubidots.add("moisturereading2", avCap);
   
   bool bufferSent = false;
   bufferSent = ubidots.send(WEBHOOK_NAME, PUBLIC);  // Will use particle webhooks to send data
