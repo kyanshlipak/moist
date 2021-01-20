@@ -5,10 +5,12 @@
 
 Adafruit_Seesaw ss;
 
+//set up webhook with ubidots
 const char* WEBHOOK_NAME = "my-webhook2";
 
 Ubidots ubidots("webhook", UBI_PARTICLE);
 
+//setup serial, cap values, seesaw, and turn rgb off
 void setup()
 {
   Particle.variable("avCap",100);
@@ -27,12 +29,15 @@ void setup()
     Serial.print("seesaw started! version: ");
     Serial.println(ss.getVersion(), HEX);
   }
-  RGB.brightness(0); // all of the way off (MAX DARK)
+  
+  //turn default rgb of the way off (MAX DARK) to save power
+  RGB.brightness(0); 
 }
 
 
 int last_x = 0, last_y = 0;
 
+//simple bubble sort function
 void BubbleSort(uint16_t a[], uint16_t array_size)
 {
     uint16_t i, j, temp;
@@ -51,39 +56,47 @@ void BubbleSort(uint16_t a[], uint16_t array_size)
 }
 
 void loop() {
+  //arrays that will store temperature and moisture data points
   uint16_t temps[20] = {};
   uint16_t capreads[20] = {};
-//   System.sleep(45);
+
+  //gather 20 data points over a minute
   for (int i =0;i<20;i++){
-  uint16_t tempC = ss.getTemp();
-  uint16_t capread = ss.touchRead(0);
-  uint16_t tempF = (tempC*9/5) + 32;
-  temps[i]= tempF;
-  capreads[i]= capread;
-  Serial.print("Temperature: ");
-  Serial.print(tempF);
-  Serial.println("*F");
-  Serial.print("Capacitive: ");
-  Serial.println(capread);
-  delay(3000);
+    uint16_t tempC = ss.getTemp();
+    uint16_t capread = ss.touchRead(0);
+    uint16_t tempF = (tempC*9/5) + 32;
+    temps[i]= tempF;
+    capreads[i]= capread;
+    Serial.print("Temperature: ");
+    Serial.print(tempF);
+    Serial.println("*F");
+    Serial.print("Capacitive: ");
+    Serial.println(capread);
+    delay(3000);
   }
   
+  //find the mean of the middle 10 temperature and moisture values
   BubbleSort(capreads,20);
   BubbleSort(temps,20);
   uint16_t avCap = (capreads[5]+capreads[6]+capreads[7]+capreads[8]+capreads[9]+capreads[10]+capreads[11]+capreads[12]+capreads[13]+capreads[14])/10;
   float avTemp = (temps[5]+temps[6]+temps[7]+temps[8]+temps[9]+temps[10]+temps[11]+temps[12]+temps[13]+temps[14])/10;
 
+  //print values to serial for debugging
   for (int i = 0; i<20;i++){
       Serial.println(temps[i]);
       delay(10);
       Serial.println(capreads[i]);
       delay(10);
   }
+  
   Serial.println(avCap);
   Serial.println(avTemp);
+  
+  //add readings to ubidots
   ubidots.add("temperature2", avTemp);  // Change for your variable name
   ubidots.add("moisturereading2", avCap);
   
+  //check if the values sent
   bool bufferSent = false;
   bufferSent = ubidots.send(WEBHOOK_NAME, PUBLIC);  // Will use particle webhooks to send data
 
@@ -91,6 +104,8 @@ void loop() {
     // Do something if values were sent properly
     Serial.println("Values sent by the device");
   }
+  
+  //deep sleep to save power
   System.sleep(SLEEP_MODE_DEEP,120);
 //   delay(60000);
   
